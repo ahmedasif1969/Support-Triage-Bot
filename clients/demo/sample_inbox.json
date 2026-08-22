@@ -1,0 +1,128 @@
+[
+  {
+    "id": 1,
+    "from_name": "Jenna Marks",
+    "from_email": "jenna.marks@gmail.com",
+    "subject": "App crashes every time I try to export",
+    "body": "Hi, every time I click 'export to PDF' the app just freezes and then closes completely. I've tried restarting my laptop twice. This is happening on the latest version. Can someone help?"
+  },
+  {
+    "id": 2,
+    "from_name": "Robert Chu",
+    "from_email": "rchu99@yahoo.com",
+    "subject": "Charged twice for my order",
+    "body": "I just noticed I was billed $89.00 twice on my card for order #55231. I only ordered once. Please refund the duplicate charge as soon as possible, this is really frustrating."
+  },
+  {
+    "id": 3,
+    "from_name": "Priya Natarajan",
+    "from_email": "priya.n@outlook.com",
+    "subject": "Question about plan upgrade",
+    "body": "Hey there, does the Pro plan include the API access feature or is that only on Enterprise? Just trying to decide which plan to go with before I sign up. Thanks!"
+  },
+  {
+    "id": 4,
+    "from_name": "Dana Whitfield",
+    "from_email": "d.whitfield@proton.me",
+    "subject": "THIS IS UNACCEPTABLE",
+    "body": "I have emailed THREE TIMES about my account being locked and NO ONE has responded in 5 days. I run my business through this platform and I am losing money every single hour it's down. Fix this NOW or I am cancelling and telling everyone I know not to use you."
+  },
+  {
+    "id": 5,
+    "from_name": "Marcus Long",
+    "from_email": "marcus.long@icloud.com",
+    "subject": "cant login",
+    "body": "not working. says wrong password but its not wrong. tried 3 times"
+  },
+  {
+    "id": 6,
+    "from_name": "N/A",
+    "from_email": "winner-claim@totally-legit-prize.biz",
+    "subject": "YOU HAVE WON $1,000,000!!! CLAIM NOW",
+    "body": "Congratulations!!! You have been selected as our lucky winner. Click here immediately to claim your prize before it expires: totally-legit-prize.biz/claim. Act fast!!!"
+  },
+  {
+    "id": 7,
+    "from_name": "Elena Vasquez",
+    "from_email": "elena.v@vasquezdesign.co",
+    "subject": "Refund request - cancelled subscription last month",
+    "body": "I cancelled my subscription on July 15th but was still charged for August. I have the cancellation confirmation email if needed. Could you please process a refund for the August charge? Order/account email is this one."
+  },
+  {
+    "id": 8,
+    "from_name": "Tom Baker",
+    "from_email": "tbaker@bakerplumbingllc.com",
+    "subject": "Invoice PDF looks broken",
+    "body": "When I download my invoice from the billing page, the PDF opens with all the text overlapping and unreadable. Using Chrome on Windows 11. Not urgent, just wanted to flag it."
+  },
+  {
+    "id": 9,
+    "from_name": "Sophie Ahn",
+    "from_email": "sophie.ahn@gmail.com",
+    "subject": "Is there a mobile app?",
+    "body": "Loving the product so far! Quick question - is there an iOS app, or is this web-only for now? Would love to check tickets on the go."
+  },
+  {
+    "id": 10,
+    "from_name": "Greg Foster",
+    "from_email": "gfoster@fosterlegal.com",
+    "subject": "URGENT - client data appears to be visible to other accounts",
+    "body": "We just noticed that one of our team members can see documents belonging to a completely different client account when they search. This is a serious data privacy issue for a law firm and needs to be looked at immediately. Please call me at your earliest opportunity."
+  },
+  {
+    "id": 11,
+    "from_name": "Unclear",
+    "from_email": "user48213@mail.com",
+    "subject": "hey",
+    "body": "it doesnt work fix pls"
+  },
+  {
+    "id": 12,
+    "from_name": "Carla Mendes",
+    "from_email": "carla.mendes@retailhub.com",
+    "subject": "Feature request: bulk CSV upload",
+    "body": "Would it be possible to add a bulk CSV import for product listings? Right now I have to add all 400 of our SKUs one at a time which takes forever. Not urgent but would be a huge time saver."
+  },
+  {
+    "id": 13,
+    "from_name": "Aiden Wolfe",
+    "from_email": "aiden.wolfe@startupmail.io",
+    "subject": "Refund - product not as described",
+    "body": "I bought the premium template pack expecting editable Figma files but got flat PNGs instead. That's not what the listing said. I'd like a full refund please, order #77890."
+  },
+  {
+    "id": 14,
+    "from_name": "Michelle Rowe",
+    "from_email": "m.rowe@rowefitness.com",
+    "subject": "Booking confirmation not received",
+    "body": "I booked a session yesterday and paid, but never got the confirmation email and it's not showing in my account either. Did the booking actually go through? A little worried since I paid already."
+  },
+  {
+    "id": 15,
+    "from_name": "Kevin Osei",
+    "from_email": "kevin.osei@gmail.com",
+    "subject": "Site down for everyone??",
+    "body": "Is the whole site down right now? Getting a 502 error on every page for the past 20 minutes, not just me - my coworker has the same issue. We have a client demo in an hour."
+  },
+  {
+    "id": 16,
+    "from_name": "Laura Petit",
+    "from_email": "laura.petit@gmail.com",
+    "subject": "Thank you!",
+    "body": "Just wanted to say your support team helped me out last week and it made a huge difference. No issue here, just appreciate you all!"
+  },
+  {
+    "id": 17,
+    "from_name": "Devon Blake",
+    "from_email": "devon.blake@blakeconstruction.net",
+    "subject": "double charged AGAIN this is the second time",
+    "body": "This happened last month too and now it's happened again - two charges of $149 on the same day. I need this refunded and I need to know why it keeps happening. Getting really tired of dealing with this every month."
+  },
+  {
+    "id": 18,
+    "from_name": "N/A",
+    "from_email": "promo@discount-deals-4u.net",
+    "subject": "Re: Re: your account",
+    "body": "click here to verify your account information immediately or it will be suspended: bit.ly/xyz123-verify-now"
+  }
+]

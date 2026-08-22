@@ -1,0 +1,18 @@
+# secrets
+.env
+clients/*/.env
+clients/*/credentials.json
+clients/*/token.json
+
+# generated / stateful data (contains customer PII — never commit)
+clients/*/state.db
+clients/*/tickets_log.csv
+clients/*/report.html
+clients/*/.run.lock
+logs/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
