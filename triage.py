@@ -18,8 +18,14 @@ Multi-client, production-oriented design:
                                double-process or double-alert a ticket.
   - lock.py                   file lock preventing two overlapping runs for
                                the same client from racing on state.db.
+  - sheets.py                  the client's actual ticket board — every
+                               ticket is appended as a row in their Google
+                               Sheet with a "Pending" status they update by
+                               hand. Optional per client (google_sheet_id).
   - alerts.py                 real Slack webhooks: urgent tickets go to the
-                               client's channel, run failures go to yours.
+                               client's channel (with a deep link straight
+                               to that ticket's row in the sheet), run
+                               failures go to an ops channel.
   - connectors/                swappable inbox sources (json_file, gmail).
 
 Usage:
@@ -47,6 +53,7 @@ from google.genai import errors as genai_errors
 import alerts
 import connectors
 import lock
+import sheets
 import state
 from config import ClientConfig
 
@@ -304,6 +311,21 @@ def _run(config: ClientConfig, logger: logging.Logger):
             except ValueError as e:
                 logger.warning("Ticket #%s failed to classify: %s", msg_id, e)
                 break
+            except Exception as e:
+                # Catches anything not already handled above — network
+                # timeouts, DNS blips, connection resets, etc. These are
+                # transient and retryable exactly like a 503, but they
+                # don't come back as a genai_errors type, so without this
+                # they'd propagate uncaught and kill the *entire* batch
+                # over one bad connection instead of just this ticket.
+                if attempt < len(backoff):
+                    wait = backoff[attempt]
+                    logger.warning("Unexpected error on ticket #%s (%s), waiting %ds (attempt %d)...",
+                                    msg_id, e, wait, attempt + 1)
+                    time.sleep(wait)
+                    continue
+                logger.warning("Ticket #%s failed to classify after retries: %s", msg_id, e)
+                break
 
         if result is None:
             result = {"category": "general_question", "urgency": "low",
@@ -312,11 +334,6 @@ def _run(config: ClientConfig, logger: logging.Logger):
                       "draft_reply": ""}
 
         queue = route(msg, result)
-
-        if queue == "urgent_queue":
-            print(f"🚨 URGENT ALERT — Ticket #{msg_id} ({result['urgency'].upper()}): {result['summary']}")
-            alerts.alert_urgent_ticket(config.slack_webhook_url, config.name, msg_id,
-                                        result["urgency"], result["summary"])
 
         row = {
             "id": msg_id,
@@ -332,6 +349,22 @@ def _run(config: ClientConfig, logger: logging.Logger):
             "draft_reply": result["draft_reply"],
         }
         new_rows.append(row)
+
+        # The Sheet is the client's actual ticket board — every ticket goes
+        # there (not just urgent ones) so their team has one place to see
+        # everything and mark it handled. Optional: a client with no
+        # google_sheet_id configured just skips this silently.
+        sheet_link = None
+        if config.get("google_sheet_id"):
+            try:
+                sheet_link = sheets.append_ticket(config, row)
+            except Exception as e:
+                logger.warning("Failed to write ticket #%s to the Google Sheet: %s", msg_id, e)
+
+        if queue == "urgent_queue":
+            print(f"🚨 URGENT ALERT — Ticket #{msg_id} ({result['urgency'].upper()}): {result['summary']}")
+            alerts.alert_urgent_ticket(config.slack_webhook_url, config.name, msg_id,
+                                        result["urgency"], result["summary"], sheet_link)
 
         # Mark processed BEFORE the mailbox side-effect: state.db is the
         # source of truth, so a crash between these two lines just means

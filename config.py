@@ -27,6 +27,7 @@ DEFAULT_CONFIG = {
     "inbox_type": "json_file",       # json_file | gmail
     "inbox_file": "sample_inbox.json",  # json_file connector only
     "gmail_label": "INBOX",             # gmail connector only
+    "google_sheet_id": "",            # the client's ticket board; "" disables Sheets writes
     "categories": DEFAULT_CATEGORIES,
     "urgency_levels": DEFAULT_URGENCY_LEVELS,
     "extra_prompt_guidance": "",     # appended to the system prompt, e.g. business-specific rules

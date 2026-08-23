@@ -3,6 +3,7 @@
 clients/*/.env
 clients/*/credentials.json
 clients/*/token.json
+clients/*/sheets_credentials.json
 
 # generated / stateful data (contains customer PII — never commit)
 clients/*/state.db

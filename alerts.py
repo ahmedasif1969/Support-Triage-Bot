@@ -35,8 +35,11 @@ def send_slack(webhook_url: str, text: str) -> bool:
         return False
 
 
-def alert_urgent_ticket(webhook_url: str, client_name: str, ticket_id, urgency: str, summary: str):
+def alert_urgent_ticket(webhook_url: str, client_name: str, ticket_id, urgency: str, summary: str,
+                         sheet_link: str = None):
     text = f"🚨 *[{client_name}] Urgent ticket #{ticket_id}* ({urgency.upper()})\n{summary}"
+    if sheet_link:
+        text += f"\n<{sheet_link}|View & respond in the ticket sheet →>"
     send_slack(webhook_url, text)
 
 
