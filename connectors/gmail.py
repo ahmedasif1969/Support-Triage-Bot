@@ -44,8 +44,12 @@ def _get_credentials(config):
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except Exception:
+                creds = None
+
+        if not creds or not creds.valid:
             # Check environment variables first (for Railway / cloud hosting)
             client_id = os.environ.get("GMAIL_CLIENT_ID")
             client_secret = os.environ.get("GMAIL_CLIENT_SECRET")

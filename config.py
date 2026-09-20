@@ -56,12 +56,14 @@ class Config:
         self.slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
         self.ops_webhook_url = os.environ.get("OPS_SLACK_WEBHOOK_URL")
 
-        # Pre-seed token.json if provided via GMAIL_TOKEN_JSON env var (for Railway/headless)
+        # Pre-seed or update token.json if provided via GMAIL_TOKEN_JSON env var (for Railway/headless)
         token_env = os.environ.get("GMAIL_TOKEN_JSON")
         token_file = self.path("token.json")
-        if token_env and not token_file.exists():
+        if token_env:
             token_file.parent.mkdir(parents=True, exist_ok=True)
-            token_file.write_text(token_env.strip(), encoding="utf-8")
+            # Write if missing or if the secret was updated
+            if not token_file.exists() or token_file.read_text(encoding="utf-8").strip() != token_env.strip():
+                token_file.write_text(token_env.strip(), encoding="utf-8")
 
     def get(self, key, default=None):
         return self.data.get(key, default)
