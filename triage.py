@@ -1,27 +1,27 @@
 """
 Support Ticket Triage Bot
 --------------------------
-Fetches a batch of raw customer messages for one client (via a pluggable
-connector — a JSON file, a live Gmail inbox, etc.), classifies each new one
-with Gemini, and writes a triage log (CSV, cumulative) plus a demo-ready
-HTML report of what's new this run. Never sends anything to the customer
-automatically — every draft reply is meant for a human to review and
-approve.
+Fetches a batch of raw customer messages (via a pluggable connector — a
+JSON file, a live Gmail inbox, etc.), classifies each new one with Gemini,
+and writes a triage log (CSV, cumulative) plus a demo-ready HTML report of
+what's new this run. Never sends anything to the customer automatically —
+every draft reply is meant for a human to review and approve.
 
-Multi-client, production-oriented design:
-  - clients/<name>/           one directory per client: .env (secrets),
-                               config.json (taxonomy/inbox settings),
-                               state.db (idempotency), tickets_log.csv,
-                               report.html.
+Single-tenant-per-folder design: this whole project directory is the
+deliverable. To onboard a new client, copy the entire folder, fill in
+.env and config.json with their own details, and hand them the folder to
+host themselves (their own server/schedule). Everything lives at the
+project root — there is no clients/<name>/ nesting:
+  - .env / config.json        secrets and settings (see config.py).
   - state.py                  SQLite idempotency store so re-runs / crashed
                                runs / overlapping schedules never
                                double-process or double-alert a ticket.
-  - lock.py                   file lock preventing two overlapping runs for
-                               the same client from racing on state.db.
+  - lock.py                   file lock preventing two overlapping runs
+                               from racing on state.db.
   - sheets.py                  the client's actual ticket board — every
                                ticket is appended as a row in their Google
                                Sheet with a "Pending" status they update by
-                               hand. Optional per client (google_sheet_id).
+                               hand. Optional (google_sheet_id).
   - alerts.py                 real Slack webhooks: urgent tickets go to the
                                client's channel (with a deep link straight
                                to that ticket's row in the sheet), run
@@ -29,9 +29,8 @@ Multi-client, production-oriented design:
   - connectors/                swappable inbox sources (json_file, gmail).
 
 Usage:
-    python triage.py                          # runs the "demo" client
-    python triage.py --client acme            # runs a specific client
-    python triage.py --client acme --gmail-auth   # one-time Gmail OAuth
+    python triage.py               # process new messages, write log/report/sheet
+    python triage.py --gmail-auth  # one-time Gmail OAuth (only if inbox_type is "gmail")
 """
 
 import argparse
@@ -55,9 +54,9 @@ import connectors
 import lock
 import sheets
 import state
-from config import ClientConfig
+from config import Config
 
-MODEL = "gemini-3.6-flash"
+MODEL = "gemini-3.5-flash-lite"
 
 SYSTEM_PROMPT = """You are a support ticket triage assistant for a small/medium business. \
 You will be given one raw customer message (from email, a contact form, or chat). \
@@ -155,7 +154,7 @@ def route(_message: dict, result: dict) -> str:
     return "general_queue"
 
 
-def write_log(config: ClientConfig, rows: list):
+def write_log(config: Config, rows: list):
     """Appends to a cumulative, per-client CSV — the full audit trail across
     every run, not just this one (each run only sees newly-fetched, not-yet-
     processed messages, so append is correct here)."""
@@ -173,7 +172,7 @@ def write_log(config: ClientConfig, rows: list):
             writer.writerow(row)
 
 
-def write_html_report(config: ClientConfig, rows: list):
+def write_html_report(config: Config, rows: list):
     """Overwrites report.html with just *this run's* newly-triaged tickets —
     a "what's new since last check" view. Full history lives in
     tickets_log.csv."""
@@ -259,7 +258,7 @@ def write_html_report(config: ClientConfig, rows: list):
         f.write(html)
 
 
-def _run(config: ClientConfig, logger: logging.Logger):
+def _run(config: Config, logger: logging.Logger):
     client = genai.Client(api_key=config.gemini_api_key)
 
     categories = config.get("categories")
@@ -269,7 +268,7 @@ def _run(config: ClientConfig, logger: logging.Logger):
     if extra_guidance:
         system_prompt = system_prompt + "\n\nClient-specific guidance:\n" + extra_guidance
 
-    logger.info("Fetching messages for client '%s' (inbox_type=%s)...", config.name, config.get("inbox_type"))
+    logger.info("Fetching messages for '%s' (inbox_type=%s)...", config.name, config.get("inbox_type"))
     messages = connectors.fetch_messages(config)
     logger.info("Fetched %d message(s).", len(messages))
 
@@ -397,19 +396,14 @@ def _run(config: ClientConfig, logger: logging.Logger):
 
 def main():
     parser = argparse.ArgumentParser(description="Support ticket triage bot")
-    parser.add_argument("--client", default="demo", help="Client name under clients/ (default: demo)")
     parser.add_argument("--gmail-auth", action="store_true",
-                         help="Run the one-time interactive Gmail OAuth flow for this client, then exit")
+                         help="Run the one-time interactive Gmail OAuth flow, then exit")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     logger = logging.getLogger("triage")
 
-    try:
-        config = ClientConfig(args.client)
-    except FileNotFoundError as e:
-        print(f"ERROR: {e}")
-        sys.exit(1)
+    config = Config()
 
     if args.gmail_auth:
         from connectors import gmail
@@ -417,17 +411,16 @@ def main():
         return
 
     if not config.gemini_api_key:
-        print(f"ERROR: GEMINI_API_KEY not set for client '{args.client}'. Add it to "
-              f"clients/{args.client}/.env (see clients/{args.client}/.env.example).")
+        print("ERROR: GEMINI_API_KEY not set. Add it to .env (see .env.example).")
         sys.exit(1)
 
     lock_path = config.path(".run.lock")
     try:
         with lock.run_lock(lock_path) as was_stale:
             if was_stale:
-                logger.warning("Previous lock for '%s' was stale — a prior run may have crashed "
-                                "without cleaning up.", args.client)
-                alerts.alert_ops(config.ops_webhook_url, args.client,
+                logger.warning("Previous lock was stale — a prior run may have crashed "
+                                "without cleaning up.")
+                alerts.alert_ops(config.ops_webhook_url, config.name,
                                   "Previous run's lock file was stale (crashed without cleanup?). "
                                   "This run proceeded anyway.")
             _run(config, logger)
@@ -435,8 +428,8 @@ def main():
         logger.warning(str(e))
     except Exception:
         tb = traceback.format_exc()
-        logger.error("Run failed for client '%s':\n%s", args.client, tb)
-        alerts.alert_ops(config.ops_webhook_url, args.client, tb[-1500:])
+        logger.error("Run failed:\n%s", tb)
+        alerts.alert_ops(config.ops_webhook_url, config.name, tb[-1500:])
         sys.exit(1)
 
 

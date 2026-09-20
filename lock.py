@@ -3,8 +3,8 @@ Simple file-based run lock.
 
 Stops a scheduled run from overlapping with a still-running previous one
 (e.g. a slow batch plus an aggressive cron interval) which could otherwise
-race on the same state.db. Not distributed-safe — fine for the "one job
-per client, one machine" setup this project targets.
+race on the same state.db. Not distributed-safe — fine for the "one
+deployed copy of this project, one machine" setup this project targets.
 
 If a lock file is found but is older than STALE_AFTER_SECONDS, it's
 assumed to be left over from a run that crashed without cleaning up, and

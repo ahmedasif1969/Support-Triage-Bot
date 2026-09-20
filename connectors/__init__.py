@@ -3,7 +3,7 @@ Inbox connectors.
 
 Every connector module exposes:
 
-    fetch_messages(config: ClientConfig) -> list[dict]
+    fetch_messages(config: Config) -> list[dict]
 
 returning messages shaped like:
 
@@ -14,7 +14,7 @@ so a given customer message must always come back with the same id.
 
 A connector may optionally expose:
 
-    mark_done(config: ClientConfig, message_id) -> None
+    mark_done(config: Config, message_id) -> None
 
 as a best-effort UX nicety (e.g. marking a Gmail message read). state.db
 remains the actual source of truth for "already processed" — mark_done

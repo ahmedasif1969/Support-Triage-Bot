@@ -1,15 +1,14 @@
 # secrets
 .env
-clients/*/.env
-clients/*/credentials.json
-clients/*/token.json
-clients/*/sheets_credentials.json
+credentials.json
+token.json
+sheets_credentials.json
 
 # generated / stateful data (contains customer PII — never commit)
-clients/*/state.db
-clients/*/tickets_log.csv
-clients/*/report.html
-clients/*/.run.lock
+state.db
+tickets_log.csv
+report.html
+.run.lock
 logs/
 
 # python

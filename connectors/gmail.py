@@ -4,17 +4,17 @@ API, scoped to one client's mailbox via their own OAuth credentials.
 
 Needs: pip install -r requirements-gmail.txt
 
-One-time setup per client:
+One-time setup per client (do this once per copy of the project folder):
   1. In Google Cloud Console, create/select a project, enable the "Gmail
      API", then create an OAuth client ID of type "Desktop app". Download
-     it and save it as clients/<name>/credentials.json.
+     it and save it as credentials.json in the project root.
   2. Run this once, interactively, to complete the OAuth consent screen:
-         python triage.py --client <name> --gmail-auth
-     It opens a browser, and on success writes clients/<name>/token.json.
-     Tokens refresh automatically after that — no more interactive steps,
-     which is what makes this safe to run from cron/a scheduler.
-  3. In clients/<name>/config.json, set "inbox_type": "gmail" and
-     optionally "gmail_label" (default: the main inbox).
+         python triage.py --gmail-auth
+     It opens a browser, and on success writes token.json in the project
+     root. Tokens refresh automatically after that — no more interactive
+     steps, which is what makes this safe to run from cron/a scheduler.
+  3. In config.json, set "inbox_type": "gmail" and optionally
+     "gmail_label" (default: the main inbox).
 
 credentials.json and token.json both grant mailbox access and must never
 be committed — they're covered by .gitignore already.
@@ -46,7 +46,7 @@ def _get_credentials(config):
                 raise FileNotFoundError(
                     f"{creds_path} not found. Download an OAuth Desktop client ID from "
                     f"Google Cloud Console and save it there, then run "
-                    f"`python triage.py --client {config.name} --gmail-auth`."
+                    f"`python triage.py --gmail-auth`."
                 )
             flow = InstalledAppFlow.from_client_secrets_file(str(creds_path), SCOPES)
             creds = flow.run_local_server(port=0)
@@ -58,7 +58,7 @@ def _get_credentials(config):
 def authorize_interactive(config):
     """The one-time interactive OAuth flow, run via `--gmail-auth`."""
     _get_credentials(config)
-    print(f"Gmail authorized for client '{config.name}'. Token saved to {config.path('token.json')}.")
+    print(f"Gmail authorized for '{config.name}'. Token saved to {config.path('token.json')}.")
 
 
 def _extract_body(payload) -> str:

@@ -12,16 +12,16 @@ write-conflict handling needed.
 Auth uses a Google service account, not interactive OAuth, because this
 runs unattended on a schedule with no one available to click "allow."
 
-One-time setup per client:
+One-time setup per client (do this once per copy of the project folder):
   1. In Google Cloud Console, create a service account and download its
-     JSON key. Save it as clients/<name>/sheets_credentials.json.
+     JSON key. Save it as sheets_credentials.json in the project root.
   2. Create a blank Google Sheet. Share it (Editor access) with the
      service account's email address — it looks like
      something@your-project.iam.gserviceaccount.com and is inside the
      downloaded key file as "client_email".
   3. Copy the sheet's ID out of its URL:
      https://docs.google.com/spreadsheets/d/<THIS PART>/edit
-     and set it as "google_sheet_id" in clients/<name>/config.json.
+     and set it as "google_sheet_id" in config.json.
 
 The header row is created automatically on first run if the sheet is
 empty — no manual template to keep in sync.
@@ -46,7 +46,7 @@ def _open_worksheet(config):
         )
     sheet_id = config.get("google_sheet_id")
     if not sheet_id:
-        raise ValueError(f'Set "google_sheet_id" in clients/{config.name}/config.json first.')
+        raise ValueError('Set "google_sheet_id" in config.json first.')
 
     creds = Credentials.from_service_account_file(str(creds_path), scopes=SCOPES)
     client = gspread.authorize(creds)

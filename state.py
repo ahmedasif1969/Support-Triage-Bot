@@ -1,10 +1,10 @@
 """
 Idempotency store.
 
-Tracks which ticket IDs have already been triaged for a client (one SQLite
-file per client, clients/<name>/state.db) so that re-running the bot,
-recovering from a crash mid-run, or an overlapping scheduled run never
-double-classifies or double-alerts on the same message.
+Tracks which ticket IDs have already been triaged (state.db in the project
+root) so that re-running the bot, recovering from a crash mid-run, or an
+overlapping scheduled run never double-classifies or double-alerts on the
+same message.
 """
 import sqlite3
 from pathlib import Path
