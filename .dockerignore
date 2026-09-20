@@ -1,0 +1,17 @@
+.git
+.gitignore
+.env
+credentials.json
+sheets_credentials.json
+token.json
+state.db
+tickets_log.csv
+report.html
+.run.lock
+logs/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.claude/
+scripts/

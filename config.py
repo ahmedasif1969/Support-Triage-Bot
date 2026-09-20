@@ -56,9 +56,25 @@ class Config:
         self.slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
         self.ops_webhook_url = os.environ.get("OPS_SLACK_WEBHOOK_URL")
 
+        # Pre-seed token.json if provided via GMAIL_TOKEN_JSON env var (for Railway/headless)
+        token_env = os.environ.get("GMAIL_TOKEN_JSON")
+        token_file = self.path("token.json")
+        if token_env and not token_file.exists():
+            token_file.parent.mkdir(parents=True, exist_ok=True)
+            token_file.write_text(token_env.strip(), encoding="utf-8")
+
     def get(self, key, default=None):
         return self.data.get(key, default)
 
     def path(self, *parts) -> Path:
-        """Resolve a path inside this project folder."""
+        """Resolve a path inside this project folder or respect env var overrides."""
+        if len(parts) == 1:
+            name = parts[0]
+            if name == "token.json" and os.environ.get("GMAIL_TOKEN_PATH"):
+                return Path(os.environ["GMAIL_TOKEN_PATH"]).resolve()
+            if name == "state.db" and os.environ.get("STATE_DB_PATH"):
+                return Path(os.environ["STATE_DB_PATH"]).resolve()
+            if name == "tickets_log.csv" and (os.environ.get("TICKETS_LOG_PATH") or os.environ.get("TICKETS_LOG")):
+                return Path(os.environ.get("TICKETS_LOG_PATH") or os.environ.get("TICKETS_LOG")).resolve()
+
         return ROOT.joinpath(*parts)

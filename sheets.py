@@ -26,6 +26,8 @@ One-time setup per client (do this once per copy of the project folder):
 The header row is created automatically on first run if the sheet is
 empty — no manual template to keep in sync.
 """
+import json
+import os
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -38,17 +40,30 @@ HEADERS = [
 
 
 def _open_worksheet(config):
-    creds_path = config.path("sheets_credentials.json")
-    if not creds_path.exists():
-        raise FileNotFoundError(
-            f"{creds_path} not found. Create a Google service account, download its "
-            f"JSON key there, and share your Google Sheet with its email address."
-        )
     sheet_id = config.get("google_sheet_id")
     if not sheet_id:
         raise ValueError('Set "google_sheet_id" in config.json first.')
 
-    creds = Credentials.from_service_account_file(str(creds_path), scopes=SCOPES)
+    creds = None
+    # 1. Check if full JSON is passed via environment variable (e.g. Railway Secret)
+    sa_env = os.environ.get("SHEETS_SERVICE_ACCOUNT")
+    if sa_env:
+        try:
+            info = json.loads(sa_env)
+            creds = Credentials.from_service_account_info(info, scopes=SCOPES)
+        except Exception as e:
+            raise ValueError(f"Failed to parse SHEETS_SERVICE_ACCOUNT environment variable: {e}")
+    else:
+        # 2. Fallback to local file
+        creds_path = config.path("sheets_credentials.json")
+        if creds_path.exists():
+            creds = Credentials.from_service_account_file(str(creds_path), scopes=SCOPES)
+        else:
+            raise FileNotFoundError(
+                f"Sheets credentials not found. Either set SHEETS_SERVICE_ACCOUNT env var "
+                f"or save service account JSON as {creds_path}."
+            )
+
     client = gspread.authorize(creds)
     return client.open_by_key(sheet_id).sheet1
 

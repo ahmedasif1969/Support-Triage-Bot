@@ -1,8 +1,9 @@
 {
   "business_name": "Demo Client",
   "inbox_type": "gmail",
+  "inbox_file": "sample_inbox.json",
   "gmail_label": "INBOX",
-  "google_sheet_id": "1IqMgMbCaOiLUZMa2P8pqWHJJJzvl3vcltNpFcVVc-fY",
+  "google_sheet_id": "",
   "categories": [
     "bug_report",
     "refund_request",

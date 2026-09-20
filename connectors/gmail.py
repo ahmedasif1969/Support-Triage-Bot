@@ -27,6 +27,10 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+import json
+import os
+import tempfile
+
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 
@@ -42,14 +46,33 @@ def _get_credentials(config):
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            if not creds_path.exists():
+            # Check environment variables first (for Railway / cloud hosting)
+            client_id = os.environ.get("GMAIL_CLIENT_ID")
+            client_secret = os.environ.get("GMAIL_CLIENT_SECRET")
+            redirect_uri = os.environ.get("GMAIL_REDIRECT_URI", "http://localhost")
+
+            if client_id and client_secret:
+                client_config = {
+                    "installed": {
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                        "redirect_uris": [redirect_uri],
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    }
+                }
+                flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
+                creds = flow.run_local_server(port=0)
+            elif creds_path.exists():
+                flow = InstalledAppFlow.from_client_secrets_file(str(creds_path), SCOPES)
+                creds = flow.run_local_server(port=0)
+            else:
                 raise FileNotFoundError(
-                    f"{creds_path} not found. Download an OAuth Desktop client ID from "
-                    f"Google Cloud Console and save it there, then run "
-                    f"`python triage.py --gmail-auth`."
+                    f"Gmail credentials not found. Either set GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET "
+                    f"in your environment/.env, or place credentials.json in {creds_path}."
                 )
-            flow = InstalledAppFlow.from_client_secrets_file(str(creds_path), SCOPES)
-            creds = flow.run_local_server(port=0)
+
         token_path.write_text(creds.to_json(), encoding="utf-8")
 
     return creds
