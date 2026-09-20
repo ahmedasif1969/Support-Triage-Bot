@@ -25,6 +25,4 @@ RUN mkdir -p /railway/data && chown -R appuser:appuser /app /railway/data
 
 USER appuser
 
-VOLUME /railway/data
-
 CMD ["python", "triage.py"]
