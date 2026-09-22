@@ -59,14 +59,11 @@ def _gmail_compose_url(to_email: str, subject: str, body: str) -> str:
         if not subject.lower().startswith("re:")
         else subject
     )
-    params = urllib.parse.urlencode({
-        "view": "cm",
-        "fs": "1",
-        "to": to_email,
-        "su": subject_line,
-        "body": body,
-    })
-    return f"https://mail.google.com/mail/?{params}"
+    safe_to = urllib.parse.quote(to_email or "", safe="")
+    safe_su = urllib.parse.quote(subject_line or "", safe="")
+    safe_body = urllib.parse.quote(body or "", safe="")
+    
+    return f"https://mail.google.com/mail/?view=cm&fs=1&to={safe_to}&su={safe_su}&body={safe_body}"
 
 
 def _open_worksheet(config):
