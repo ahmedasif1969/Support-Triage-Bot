@@ -1,13 +1,17 @@
 """
 Google Sheets integration — this is the client's actual ticket board.
 
-Every classified, non-spam-only-CSV ticket gets appended as a row (id,
-timestamp, category, urgency, queue, summary, draft reply, status).
-"status" starts as "Pending" and is meant to be edited by hand by the
-client's team as they work through tickets (Pending -> Sent / Dismissed).
+Every classified ticket gets appended as a row (id, timestamp, category,
+urgency, queue, summary, draft reply, status, and a one-click Gmail reply
+link). "status" starts as "Pending" and is meant to be edited by hand by
+the client's team as they work through tickets (Pending -> Sent / Dismissed).
 This module only ever appends new rows — it never reads status back — so
 there's no risk of the bot fighting a human over the sheet, and no
 write-conflict handling needed.
+
+The "📧 Reply in Gmail" column contains a HYPERLINK formula that opens
+Gmail's compose window with To, Subject, and the AI draft body pre-filled —
+the worker just reviews and clicks Send.
 
 Auth uses a Google service account, not interactive OAuth, because this
 runs unattended on a schedule with no one available to click "allow."
@@ -28,7 +32,11 @@ empty — no manual template to keep in sync.
 """
 import json
 import os
+import time
+import urllib.parse
+
 import gspread
+from gspread.exceptions import APIError
 from google.oauth2.service_account import Credentials
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -36,7 +44,29 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 HEADERS = [
     "id", "timestamp", "from_name", "from_email", "subject", "category",
     "urgency", "queue", "customer_name", "summary", "draft_reply", "status",
+    "reply_link",
 ]
+
+# Cache which sheet IDs have already had their header confirmed this process
+# lifetime — avoids one extra read API call per ticket.
+_header_confirmed: set = set()
+
+
+def _gmail_compose_url(to_email: str, subject: str, body: str) -> str:
+    """Build a Gmail compose URL with To, Subject, and Body pre-filled."""
+    subject_line = (
+        f"Re: {subject}"
+        if not subject.lower().startswith("re:")
+        else subject
+    )
+    params = urllib.parse.urlencode({
+        "view": "cm",
+        "fs": "1",
+        "to": to_email,
+        "su": subject_line,
+        "body": body,
+    })
+    return f"https://mail.google.com/mail/?{params}"
 
 
 def _open_worksheet(config):
@@ -68,26 +98,73 @@ def _open_worksheet(config):
     return client.open_by_key(sheet_id).sheet1
 
 
-def _ensure_header(worksheet):
-    if worksheet.row_values(1) != HEADERS:
+def _ensure_header(worksheet, sheet_id: str):
+    """Write the header row if the sheet is empty.
+
+    Cached per-process so we only ever make this read once regardless of how
+    many tickets are processed in a single run — avoids burning read quota.
+    """
+    if sheet_id in _header_confirmed:
+        return
+    if worksheet.acell("A1").value != HEADERS[0]:
         worksheet.update("A1", [HEADERS])
-        worksheet.format("A1:L1", {"textFormat": {"bold": True}})
+        worksheet.format(f"A1:{chr(ord('A') + len(HEADERS) - 1)}1",
+                         {"textFormat": {"bold": True}})
+    _header_confirmed.add(sheet_id)
+
+
+def _append_with_retry(worksheet, values: list, max_retries: int = 3):
+    """Append a row using the atomic append endpoint (no reads required).
+
+    Retries up to max_retries times on 429 / quota errors with exponential
+    backoff. Raises on any other error or after exhausting retries.
+    """
+    backoff = [5, 15, 30]
+    for attempt in range(max_retries + 1):
+        try:
+            # USER_ENTERED so the =HYPERLINK() formula in reply_link is
+            # interpreted as a formula rather than stored as literal text.
+            return worksheet.append_row(values, value_input_option="USER_ENTERED")
+        except APIError as e:
+            if "429" in str(e) and attempt < max_retries:
+                wait = backoff[attempt]
+                time.sleep(wait)
+                continue
+            raise
 
 
 def append_ticket(config, row: dict) -> str:
-    """Appends one ticket as a new row and returns a URL that deep-links
-    straight to that row, for use in the Slack alert."""
+    """Appends one ticket as a new row and returns the sheet URL.
+
+    The last column contains a =HYPERLINK() formula that opens Gmail's
+    compose window with To, Subject, and the AI draft body pre-filled —
+    the worker just reviews and clicks Send.
+    """
+    sheet_id = config.get("google_sheet_id")
     worksheet = _open_worksheet(config)
-    _ensure_header(worksheet)
+    _ensure_header(worksheet, sheet_id)
+
+    # Build the Gmail compose URL — URL-encode everything so special
+    # characters in the draft body don't break the link.
+    compose_url = _gmail_compose_url(
+        to_email=row.get("from_email", ""),
+        subject=row.get("subject", ""),
+        body=row.get("draft_reply", ""),
+    )
+    # Escape any double-quotes in the URL so the HYPERLINK formula stays valid.
+    safe_url = compose_url.replace('"', '""')
+    reply_formula = f'=HYPERLINK("{safe_url}", "📧 Reply in Gmail")'
 
     values = [
         row["id"], row["timestamp"], row["from_name"], row["from_email"],
         row["subject"], row["category"], row["urgency"], row["queue"],
         row["customer_name"], row["summary"], row["draft_reply"], "Pending",
+        reply_formula,
     ]
-    # Column A's filled-row count + 1 is the next empty row. Safe from races
-    # because lock.py already guarantees only one run per client at a time.
-    next_row = len(worksheet.col_values(1)) + 1
-    worksheet.update(f"A{next_row}", [values])
 
-    return f"https://docs.google.com/spreadsheets/d/{config.get('google_sheet_id')}/edit#gid={worksheet.id}&range=A{next_row}"
+    _append_with_retry(worksheet, values)
+
+    return (
+        f"https://docs.google.com/spreadsheets/d/{sheet_id}"
+        f"/edit#gid={worksheet.id}"
+    )
